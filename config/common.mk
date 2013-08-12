@@ -70,6 +70,9 @@ PRODUCT_PROPERTY_OVERRIDES += \
     ro.com.android.dateformat=MM-dd-yyyy \
     ro.com.android.dataroaming=false
 
+PRODUCT_PROPERTY_OVERRIDES += \
+    ro.build.selinux=1
+
 ifneq ($(TARGET_BUILD_VARIANT),eng)
 # Enable ADB authentication
 ADDITIONAL_DEFAULT_PROPERTIES += ro.adb.secure=1
@@ -139,7 +142,7 @@ include vendor/cm/config/themes_common.mk
 
 # Required CM packages
 PRODUCT_PACKAGES += \
-    Camera \
+    Focal \
     Development \
     LatinIME \
     Superuser \
@@ -164,6 +167,11 @@ PRODUCT_PACKAGES += \
     CMUpdater \
     CMFileManager \
     LockClock
+
+# CM Hardware Abstraction Framework
+PRODUCT_PACKAGES += \
+    org.cyanogenmod.hardware \
+    org.cyanogenmod.hardware.xml
 
 PRODUCT_PACKAGES += \
     CellBroadcastReceiver
