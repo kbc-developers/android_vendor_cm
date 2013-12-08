@@ -1,26 +1,9 @@
 PRODUCT_BRAND ?= cyanogenmod
 
--include vendor/cm-priv/keys.mk
 SUPERUSER_EMBEDDED := true
 SUPERUSER_PACKAGE_PREFIX := com.android.settings.cyanogenmod.superuser
 
-# To deal with CM9 specifications
-# TODO: remove once all devices have been switched
-ifneq ($(TARGET_BOOTANIMATION_NAME),)
-TARGET_SCREEN_DIMENSIONS := $(subst -, $(space), $(subst x, $(space), $(TARGET_BOOTANIMATION_NAME)))
-ifeq ($(TARGET_SCREEN_WIDTH),)
-TARGET_SCREEN_WIDTH := $(word 2, $(TARGET_SCREEN_DIMENSIONS))
-endif
-ifeq ($(TARGET_SCREEN_HEIGHT),)
-TARGET_SCREEN_HEIGHT := $(word 3, $(TARGET_SCREEN_DIMENSIONS))
-endif
-endif
-
 ifneq ($(TARGET_SCREEN_WIDTH) $(TARGET_SCREEN_HEIGHT),$(space))
-
-# clear TARGET_BOOTANIMATION_NAME in case it was set for CM9 purposes
-TARGET_BOOTANIMATION_NAME :=
-
 # determine the smaller dimension
 TARGET_BOOTANIMATION_SIZE := $(shell \
   if [ $(TARGET_SCREEN_WIDTH) -lt $(TARGET_SCREEN_HEIGHT) ]; then \
@@ -59,19 +42,25 @@ endif
 
 PRODUCT_BUILD_PROP_OVERRIDES += BUILD_UTC_DATE=0
 
+ifeq ($(PRODUCT_GMS_CLIENTID_BASE),)
+PRODUCT_PROPERTY_OVERRIDES += \
+    ro.com.google.clientidbase=android-google
+else
+PRODUCT_PROPERTY_OVERRIDES += \
+    ro.com.google.clientidbase=$(PRODUCT_GMS_CLIENTID_BASE)
+endif
+
 PRODUCT_PROPERTY_OVERRIDES += \
     keyguard.no_require_sim=true \
     ro.url.legal=http://www.google.com/intl/%s/mobile/android/basic/phone-legal.html \
     ro.url.legal.android_privacy=http://www.google.com/intl/%s/mobile/android/basic/privacy.html \
-    ro.com.google.clientidbase=android-google \
     ro.com.android.wifi-watchlist=GoogleGuest \
     ro.setupwizard.enterprise_mode=1 \
     ro.com.android.dateformat=MM-dd-yyyy \
     ro.com.android.dataroaming=false
 
 PRODUCT_PROPERTY_OVERRIDES += \
-    ro.build.selinux=1 \
-    persist.sys.root_access=1
+    ro.build.selinux=1
 
 ifneq ($(TARGET_BUILD_VARIANT),eng)
 # Enable ADB authentication
@@ -83,11 +72,13 @@ PRODUCT_COPY_FILES += \
     vendor/cm/CHANGELOG.mkdn:system/etc/CHANGELOG-CM.txt
 
 # Backup Tool
+ifneq ($(WITH_GMS),true)
 PRODUCT_COPY_FILES += \
     vendor/cm/prebuilt/common/bin/backuptool.sh:system/bin/backuptool.sh \
     vendor/cm/prebuilt/common/bin/backuptool.functions:system/bin/backuptool.functions \
     vendor/cm/prebuilt/common/bin/50-cm.sh:system/addon.d/50-cm.sh \
     vendor/cm/prebuilt/common/bin/blacklist:system/addon.d/blacklist
+endif
 
 # init.d support
 PRODUCT_COPY_FILES += \
@@ -111,11 +102,6 @@ PRODUCT_COPY_FILES += \
     vendor/cm/prebuilt/common/bin/compcache:system/bin/compcache \
     vendor/cm/prebuilt/common/bin/handle_compcache:system/bin/handle_compcache
 
-# Terminal Emulator
-PRODUCT_COPY_FILES +=  \
-    vendor/cm/proprietary/Term.apk:system/app/Term.apk \
-    vendor/cm/proprietary/lib/armeabi/libjackpal-androidterm4.so:system/lib/libjackpal-androidterm4.so
-
 # Bring in camera effects
 PRODUCT_COPY_FILES +=  \
     vendor/cm/prebuilt/common/media/LMprec_508.emd:system/media/LMprec_508.emd \
@@ -133,10 +119,6 @@ PRODUCT_COPY_FILES += \
 PRODUCT_COPY_FILES += \
     vendor/cm/config/permissions/com.cyanogenmod.android.xml:system/etc/permissions/com.cyanogenmod.android.xml
 
-# Don't export PS1 in /system/etc/mkshrc.
-PRODUCT_COPY_FILES += \
-    vendor/cm/prebuilt/common/etc/mkshrc:system/etc/mkshrc
-
 # T-Mobile theme engine
 include vendor/cm/config/themes_common.mk
 
@@ -144,28 +126,30 @@ include vendor/cm/config/themes_common.mk
 PRODUCT_PACKAGES += \
     Development \
     LatinIME \
-    Superuser \
-    BluetoothExt \
-    su
+    BluetoothExt
 
 # Optional CM packages
 PRODUCT_PACKAGES += \
     VoicePlus \
     VoiceDialer \
     SoundRecorder \
-    Basic
+    Basic \
+    libemoji
 
 # Custom CM packages
+    #Trebuchet \
+
 PRODUCT_PACKAGES += \
-    Trebuchet \
+    Launcher3 \
     DSPManager \
     libcyanogen-dsp \
     audio_effects.conf \
     CMWallpapers \
     Apollo \
-    CMUpdater \
     CMFileManager \
     LockClock \
+    CMUpdater \
+    CMFota \
     CMAccount
 
 # CM Hardware Abstraction Framework
@@ -192,7 +176,12 @@ PRODUCT_PACKAGES += \
     fsck.exfat \
     mkfs.exfat \
     ntfsfix \
-    ntfs-3g
+    ntfs-3g \
+    gdbserver \
+    micro_bench \
+    oprofiled \
+    sqlite3 \
+    strace
 
 # Openssh
 PRODUCT_PACKAGES += \
@@ -208,14 +197,37 @@ PRODUCT_PACKAGES += \
 PRODUCT_PACKAGES += \
     rsync
 
+# These packages are excluded from user builds
+ifneq ($(TARGET_BUILD_VARIANT),user)
+
+PRODUCT_PACKAGES += \
+    procmem \
+    procrank \
+    Superuser \
+    su
+
+# Terminal Emulator
+PRODUCT_COPY_FILES +=  \
+    vendor/cm/proprietary/Term.apk:system/app/Term.apk \
+    vendor/cm/proprietary/lib/armeabi/libjackpal-androidterm4.so:system/lib/libjackpal-androidterm4.so
+
+PRODUCT_PROPERTY_OVERRIDES += \
+    persist.sys.root_access=1
+else
+
+PRODUCT_PROPERTY_OVERRIDES += \
+    persist.sys.root_access=0
+
+endif
+
 # easy way to extend to add more packages
 -include vendor/extra/product.mk
 
 PRODUCT_PACKAGE_OVERLAYS += vendor/cm/overlay/dictionaries
 PRODUCT_PACKAGE_OVERLAYS += vendor/cm/overlay/common
 
-PRODUCT_VERSION_MAJOR = 10
-PRODUCT_VERSION_MINOR = 2
+PRODUCT_VERSION_MAJOR = 11
+PRODUCT_VERSION_MINOR = 0
 PRODUCT_VERSION_MAINTENANCE = 0-RC0
 
 # Set CM_BUILDTYPE from the env RELEASE_TYPE, for jenkins compat
@@ -261,7 +273,15 @@ else
 endif
 
 ifeq ($(CM_BUILDTYPE), RELEASE)
-    CM_VERSION := $(PRODUCT_VERSION_MAJOR).$(PRODUCT_VERSION_MINOR).$(PRODUCT_VERSION_MAINTENANCE)$(PRODUCT_VERSION_DEVICE_SPECIFIC)-$(CM_BUILD)
+    ifndef TARGET_VENDOR_RELEASE_BUILD_ID
+        CM_VERSION := $(PRODUCT_VERSION_MAJOR).$(PRODUCT_VERSION_MINOR).$(PRODUCT_VERSION_MAINTENANCE)$(PRODUCT_VERSION_DEVICE_SPECIFIC)-$(CM_BUILD)
+    else
+        ifeq ($(TARGET_BUILD_VARIANT),user)
+            CM_VERSION := $(PRODUCT_VERSION_MAJOR).$(PRODUCT_VERSION_MINOR)-$(TARGET_VENDOR_RELEASE_BUILD_ID)-$(CM_BUILD)
+        else
+            CM_VERSION := $(PRODUCT_VERSION_MAJOR).$(PRODUCT_VERSION_MINOR).$(PRODUCT_VERSION_MAINTENANCE)$(PRODUCT_VERSION_DEVICE_SPECIFIC)-$(CM_BUILD)
+        endif
+    endif
 else
     ifeq ($(PRODUCT_VERSION_MINOR),0)
         CM_VERSION := $(PRODUCT_VERSION_MAJOR)-$(shell date -u +%Y%m%d)-$(CM_BUILDTYPE)$(CM_EXTRAVERSION)-$(CM_BUILD)
@@ -274,5 +294,8 @@ PRODUCT_PROPERTY_OVERRIDES += \
   ro.cm.version=$(CM_VERSION) \
   ro.modversion=$(CM_VERSION)
 
--include vendor/cm/sepolicy/sepolicy.mk
+-include vendor/cm-priv/keys/keys.mk
+
 -include $(WORKSPACE)/hudson/image-auto-bits.mk
+
+-include vendor/cyngn/product.mk
