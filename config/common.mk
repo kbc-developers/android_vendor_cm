@@ -241,9 +241,9 @@ ifndef CM_BUILDTYPE
 endif
 
 # Filter out random types, so it'll reset to UNOFFICIAL
-ifeq ($(filter RELEASE NIGHTLY SNAPSHOT EXPERIMENTAL,$(CM_BUILDTYPE)),)
-    CM_BUILDTYPE :=
-endif
+#ifeq ($(filter RELEASE NIGHTLY SNAPSHOT EXPERIMENTAL,$(CM_BUILDTYPE)),)
+#    CM_BUILDTYPE :=
+#endif
 
 ifdef CM_BUILDTYPE
     ifneq ($(CM_BUILDTYPE), SNAPSHOT)
@@ -268,8 +268,8 @@ ifdef CM_BUILDTYPE
     endif
 else
     # If CM_BUILDTYPE is not defined, set to UNOFFICIAL
-    CM_BUILDTYPE := UNOFFICIAL
-    CM_EXTRAVERSION :=
+#    CM_BUILDTYPE := UNOFFICIAL
+#    CM_EXTRAVERSION :=
 endif
 
 ifeq ($(CM_BUILDTYPE), RELEASE)
