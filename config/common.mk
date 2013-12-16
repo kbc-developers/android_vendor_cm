@@ -150,8 +150,7 @@ PRODUCT_PACKAGES += \
     LockClock \
     CMUpdater \
     CMFota \
-    CMAccount \
-    WhisperPush
+    CMAccount
 
 # CM Hardware Abstraction Framework
 PRODUCT_PACKAGES += \
@@ -271,6 +270,12 @@ else
     # If CM_BUILDTYPE is not defined, set to UNOFFICIAL
 #    CM_BUILDTYPE := UNOFFICIAL
 #    CM_EXTRAVERSION :=
+endif
+
+ifeq ($(CM_BUILDTYPE), UNOFFICIAL)
+    ifneq ($(TARGET_UNOFFICIAL_BUILD_ID),)
+        CM_EXTRAVERSION := "-$(TARGET_UNOFFICIAL_BUILD_ID)"
+    endif
 endif
 
 ifeq ($(CM_BUILDTYPE), RELEASE)
