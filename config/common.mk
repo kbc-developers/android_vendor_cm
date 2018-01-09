@@ -33,14 +33,6 @@ PRODUCT_BOOTANIMATION := vendor/cm/prebuilt/common/bootanimation/$(TARGET_BOOTAN
 endif
 endif
 
-ifdef CM_NIGHTLY
-PRODUCT_PROPERTY_OVERRIDES += \
-    ro.rommanager.developerid=cyanogenmodnightly
-else
-PRODUCT_PROPERTY_OVERRIDES += \
-    ro.rommanager.developerid=cyanogenmod
-endif
-
 PRODUCT_BUILD_PROP_OVERRIDES += BUILD_UTC_DATE=0
 
 ifeq ($(PRODUCT_GMS_CLIENTID_BASE),)
@@ -63,6 +55,11 @@ PRODUCT_PROPERTY_OVERRIDES += \
 PRODUCT_PROPERTY_OVERRIDES += \
     ro.build.selinux=1
 
+# Default notification/alarm sounds
+PRODUCT_PROPERTY_OVERRIDES += \
+    ro.config.notification_sound=Argon.ogg \
+    ro.config.alarm_alert=Helium.ogg
+
 ifneq ($(TARGET_BUILD_VARIANT),user)
 # Thank you, please drive thru!
 PRODUCT_PROPERTY_OVERRIDES += persist.sys.dun.override=0
@@ -83,6 +80,10 @@ PRODUCT_COPY_FILES += \
     vendor/cm/prebuilt/common/bin/backuptool.functions:install/bin/backuptool.functions \
     vendor/cm/prebuilt/common/bin/50-cm.sh:system/addon.d/50-cm.sh \
     vendor/cm/prebuilt/common/bin/blacklist:system/addon.d/blacklist
+
+# Backup Services whitelist
+PRODUCT_COPY_FILES += \
+    vendor/cm/config/permissions/backup.xml:system/etc/sysconfig/backup.xml
 
 # Signature compatibility validation
 PRODUCT_COPY_FILES += \
@@ -119,6 +120,9 @@ PRODUCT_COPY_FILES += \
 PRODUCT_COPY_FILES += \
     vendor/cm/config/permissions/com.cyanogenmod.android.xml:system/etc/permissions/com.cyanogenmod.android.xml
 
+# Include CM audio files
+include vendor/cm/config/cm_audio.mk
+
 # Theme engine
 include vendor/cm/config/themes_common.mk
 
@@ -127,14 +131,18 @@ include vendor/cm/config/cmsdk_common.mk
 
 # Required CM packages
 PRODUCT_PACKAGES += \
+    CMAudioService \
     Development \
     BluetoothExt \
-    Profiles
+    Profiles \
+    ThemeManagerService \
+    WeatherManagerService
 
 # Optional CM packages
 PRODUCT_PACKAGES += \
     libemoji \
-    Terminal
+    Terminal \
+    LiveWallpapersPicker
 
 # Include librsjni explicitly to workaround GMS issue
 PRODUCT_PACKAGES += \
@@ -142,7 +150,6 @@ PRODUCT_PACKAGES += \
 
 # Custom CM packages
 PRODUCT_PACKAGES += \
-    Launcher3 \
     Trebuchet \
     AudioFX \
     CMWallpapers \
@@ -156,7 +163,9 @@ PRODUCT_PACKAGES += \
     LiveLockScreenService \
     WeatherProvider \
     DataUsageProvider \
-    WallpaperPicker
+    WallpaperPicker \
+    SoundRecorder \
+    Screencast
 
 # Exchange support
 PRODUCT_PACKAGES += \
@@ -177,8 +186,29 @@ PRODUCT_PACKAGES += \
     oprofiled \
     sqlite3 \
     strace \
-    pigz
+    pigz \
+    7z \
+    lib7z \
+    bash \
+    bzip2 \
+    curl \
+    powertop \
+    unrar \
+    unzip \
+    vim \
+    wget \
+    zip
 
+# Custom off-mode charger
+ifneq ($(WITH_CM_CHARGER),false)
+PRODUCT_PACKAGES += \
+    charger_res_images \
+    cm_charger_res_images \
+    font_log.png \
+    libhealthd.cm
+endif
+
+# ExFAT support
 WITH_EXFAT ?= true
 ifeq ($(WITH_EXFAT),true)
 TARGET_USES_EXFAT := true
@@ -227,7 +257,13 @@ DEVICE_PACKAGE_OVERLAYS += vendor/cm/overlay/common
 
 PRODUCT_VERSION_MAJOR = 13
 PRODUCT_VERSION_MINOR = 0
-PRODUCT_VERSION_MAINTENANCE = 0-RC0
+PRODUCT_VERSION_MAINTENANCE := 5
+
+ifeq ($(TARGET_VENDOR_SHOW_MAINTENANCE_VERSION),true)
+    CM_VERSION_MAINTENANCE := $(PRODUCT_VERSION_MAINTENANCE)
+else
+    CM_VERSION_MAINTENANCE := 0
+endif
 
 # Set CM_BUILDTYPE from the env RELEASE_TYPE, for jenkins compat
 
@@ -282,7 +318,11 @@ ifeq ($(CM_BUILDTYPE), RELEASE)
         CM_VERSION := $(PRODUCT_VERSION_MAJOR).$(PRODUCT_VERSION_MINOR).$(PRODUCT_VERSION_MAINTENANCE)$(PRODUCT_VERSION_DEVICE_SPECIFIC)-$(CM_BUILD)
     else
         ifeq ($(TARGET_BUILD_VARIANT),user)
-            CM_VERSION := $(PRODUCT_VERSION_MAJOR).$(PRODUCT_VERSION_MINOR)-$(TARGET_VENDOR_RELEASE_BUILD_ID)-$(CM_BUILD)
+            ifeq ($(CM_VERSION_MAINTENANCE),0)
+                CM_VERSION := $(PRODUCT_VERSION_MAJOR).$(PRODUCT_VERSION_MINOR)-$(TARGET_VENDOR_RELEASE_BUILD_ID)-$(CM_BUILD)
+            else
+                CM_VERSION := $(PRODUCT_VERSION_MAJOR).$(PRODUCT_VERSION_MINOR).$(CM_VERSION_MAINTENANCE)-$(TARGET_VENDOR_RELEASE_BUILD_ID)-$(CM_BUILD)
+            endif
         else
             CM_VERSION := $(PRODUCT_VERSION_MAJOR).$(PRODUCT_VERSION_MINOR).$(PRODUCT_VERSION_MAINTENANCE)$(PRODUCT_VERSION_DEVICE_SPECIFIC)-$(CM_BUILD)
         endif
@@ -315,8 +355,12 @@ ifneq ($(PRODUCT_DEFAULT_DEV_CERTIFICATE),build/target/product/security/testkey)
     else
       TARGET_VENDOR_RELEASE_BUILD_ID := $(TARGET_VENDOR_RELEASE_BUILD_ID)
     endif
-    CM_DISPLAY_VERSION=$(PRODUCT_VERSION_MAJOR).$(PRODUCT_VERSION_MINOR)-$(TARGET_VENDOR_RELEASE_BUILD_ID)
-  endif
+    ifeq ($(CM_VERSION_MAINTENANCE),0)
+        CM_DISPLAY_VERSION := $(PRODUCT_VERSION_MAJOR).$(PRODUCT_VERSION_MINOR)-$(TARGET_VENDOR_RELEASE_BUILD_ID)-$(CM_BUILD)
+    else
+        CM_DISPLAY_VERSION := $(PRODUCT_VERSION_MAJOR).$(PRODUCT_VERSION_MINOR).$(CM_VERSION_MAINTENANCE)-$(TARGET_VENDOR_RELEASE_BUILD_ID)-$(CM_BUILD)
+    endif
+endif
 endif
 endif
 
